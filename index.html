@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>CSV → GPX Converter</title>
+
+    <!-- React + ReactDOM from CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+    <!-- Babel standalone (compiles JSX in the browser – OK for demo, not for production-scale) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Your JSX component file -->
+    <script type="text/babel" src="csv-to-gpx-converter.jsx"></script>
+
+    <!-- Small bootstrap script that renders your component -->
+    <script type="text/babel">
+      // Assuming your main component is named CsvToGpxConverter in csv-to-gpx-converter.jsx
+      const rootEl = document.getElementById('root');
+      const root = ReactDOM.createRoot(rootEl);
+      root.render(<CsvToGpxConverter />);
+    </script>
+  </body>
+</html>
