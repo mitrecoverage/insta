@@ -427,10 +427,11 @@
 <trkseg>`;
 
                 points.forEach(point => {
-                    // For Insta360: use speed as elevation, keep coordinates precise
+                    // For Insta360: use speed in knots × 10 as elevation
+                    const elevationValue = (point.sog_kts * 10).toFixed(1);
                     gpxContent += `
 <trkpt lat="${point.latitude.toFixed(10)}" lon="${point.longitude.toFixed(10)}">
-<ele>${point.speed_mps}</ele>
+<ele>${elevationValue}</ele>
 <time>${point.timestamp}</time>
 </trkpt>`;
                 });
@@ -685,7 +686,7 @@
                                         <label htmlFor="insta360" className="text-sm">
                                             <span className="font-medium text-blue-700">Insta360 Compatible</span>
                                             <div className="text-xs text-gray-500 mt-1">
-                                                Simplified format: speed values as elevation, basic trackpoints only
+                                                Simplified format: speed values (knots × 10) as elevation, basic trackpoints only
                                             </div>
                                         </label>
                                     </div>
@@ -795,8 +796,8 @@
                             <div className="alert alert-info mt-6">
                                 <h3 className="text-lg font-semibold mb-2">About GPX Output Formats</h3>
                                 <div className="text-sm space-y-2">
-                                    <p><strong>Insta360 Compatible:</strong> Simplified GPX format with speed values mapped to elevation field. 
-                                    Contains only lat, lon, elevation (speed), and time - optimized for Insta360 Stats Dashboard compatibility.</p>
+                                    <p><strong>Insta360 Compatible:</strong> Simplified GPX format with speed values (knots × 10) mapped to elevation field. 
+                                    Example: 8.5 knots = 85.0 elevation. Contains only lat, lon, elevation (speed), and time - optimized for Insta360 Stats Dashboard compatibility.</p>
                                     <p><strong>GPX 1.1 Compliant:</strong> Full standards compliance with Garmin TrackPointExtension v1. 
                                     All custom fields (speed, course, heading, inclination, tilt) properly formatted in extensions for 
                                     universal compatibility across Apple iOS, Android, and all GPS applications.</p>
