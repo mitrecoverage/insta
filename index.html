@@ -388,6 +388,7 @@
             const [error, setError] = useState(null);
             const [pointCount, setPointCount] = useState(0);
             const [duration, setDuration] = useState('');
+            const [conversionType, setConversionType] = useState('insta360'); // Add conversion type selector
 
             // Convert knots to meters per second
             const knotsToMps = (knots) => knots * 0.514444;
@@ -417,10 +418,40 @@
                 }
             };
 
-            // Create GPX XML structure
-            const createGPXXML = (points) => {
+            // Create Insta360-optimized GPX XML structure
+            const createInsta360GPX = (points) => {
                 let gpxContent = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="csv_to_gpx_converter_web" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Insta360_GPX_Converter" xmlns="http://www.topografix.com/GPX/1/1">
+<trk>
+<name>Sailing Track</name>
+<trkseg>`;
+
+                points.forEach(point => {
+                    // For Insta360: use speed as elevation, keep coordinates precise
+                    gpxContent += `
+<trkpt lat="${point.latitude.toFixed(10)}" lon="${point.longitude.toFixed(10)}">
+<ele>${point.speed_mps}</ele>
+<time>${point.timestamp}</time>
+</trkpt>`;
+                });
+
+                gpxContent += `
+</trkseg>
+</trk>
+</gpx>`;
+
+                return gpxContent;
+            };
+
+            // Create GPX 1.1 compliant XML structure  
+            const createCompliantGPX = (points) => {
+                let gpxContent = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="csv_to_gpx_converter_web" 
+     xmlns="http://www.topografix.com/GPX/1/1"
+     xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd
+                        http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd">
 <trk>
 <trkseg>`;
 
@@ -429,13 +460,17 @@
 <trkpt lat="${point.latitude.toFixed(10)}" lon="${point.longitude.toFixed(10)}">
 <ele>${point.hdg_true}</ele>
 <time>${point.timestamp}</time>
-<speed>${point.speed_mps}</speed>
-<cog>${point.cog}</cog>
-<hdg_true>${point.hdg_true}</hdg_true>
-<heel>${point.heel}</heel>
-<trim>${point.trim}</trim>
-<inclination>${point.inclination}</inclination>
-<tilt>${point.tilt}</tilt>
+<extensions>
+<gpxtpx:TrackPointExtension>
+<gpxtpx:speed>${point.speed_mps}</gpxtpx:speed>
+<gpxtpx:course>${point.cog}</gpxtpx:course>
+<gpxtpx:hdg_true>${point.hdg_true}</gpxtpx:hdg_true>
+<gpxtpx:heel>${point.heel}</gpxtpx:heel>
+<gpxtpx:trim>${point.trim}</gpxtpx:trim>
+<gpxtpx:inclination>${point.inclination}</gpxtpx:inclination>
+<gpxtpx:tilt>${point.tilt}</gpxtpx:tilt>
+</gpxtpx:TrackPointExtension>
+</extensions>
 </trkpt>`;
                 });
 
@@ -534,7 +569,11 @@
                 try {
                     const csvText = await file.text();
                     const points = parseCSV(csvText);
-                    const gpxXML = createGPXXML(points);
+                    
+                    // Choose GPX format based on conversion type
+                    const gpxXML = conversionType === 'insta360' 
+                        ? createInsta360GPX(points) 
+                        : createCompliantGPX(points);
                     
                     // Calculate duration from first to last point
                     let trackDuration = '';
@@ -546,7 +585,8 @@
                     const blob = new Blob([gpxXML], { type: 'application/gpx+xml' });
                     const url = URL.createObjectURL(blob);
                     
-                    const outputFilename = file.name.replace(/\.csv$/i, '_converted.gpx');
+                    const suffix = conversionType === 'insta360' ? '_insta360.gpx' : '_compliant.gpx';
+                    const outputFilename = file.name.replace(/\.csv$/i, suffix);
                     
                     setResult({
                         url,
@@ -561,7 +601,7 @@
                 } finally {
                     setConverting(false);
                 }
-            }, [file]);
+            }, [file, conversionType]);
 
             // Download GPX file
             const downloadGPX = useCallback(() => {
@@ -582,10 +622,10 @@
                         <div className="header">
                             <div className="header-title">
                                 <MapPin className="h-12 w-12 text-blue-600 mr-3" />
-                                <h1 className="text-4xl font-bold text-gray-900">Enhanced CSV to GPX Converter</h1>
+                                <h1 className="text-4xl font-bold text-gray-900">CSV to GPX Converter (Insta360 + Universal)</h1>
                             </div>
                             <p className="text-lg text-gray-600">
-                                Convert marine navigation CSV data to GPX format with enhanced precision (10-digit coordinates), speed in m/s (2-decimal precision), and inclination/tilt angle data
+                                Convert marine navigation CSV data to GPX format: choose Insta360-optimized (speed as elevation) or GPX 1.1 compliant (universal compatibility)
                             </p>
                         </div>
 
@@ -624,6 +664,49 @@
                                         </span>
                                     </div>
                                 )}
+                            </div>
+
+                            {/* Conversion Type Selector */}
+                            <div className="mb-8">
+                                <label className="block text-sm font-medium text-gray-700 mb-4">
+                                    Output Format
+                                </label>
+                                <div className="space-y-3">
+                                    <div className="flex items-center">
+                                        <input
+                                            type="radio"
+                                            id="insta360"
+                                            name="conversionType"
+                                            value="insta360"
+                                            checked={conversionType === 'insta360'}
+                                            onChange={(e) => setConversionType(e.target.value)}
+                                            className="mr-3"
+                                        />
+                                        <label htmlFor="insta360" className="text-sm">
+                                            <span className="font-medium text-blue-700">Insta360 Compatible</span>
+                                            <div className="text-xs text-gray-500 mt-1">
+                                                Simplified format: speed values as elevation, basic trackpoints only
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <input
+                                            type="radio"
+                                            id="compliant"
+                                            name="conversionType"
+                                            value="compliant"
+                                            checked={conversionType === 'compliant'}
+                                            onChange={(e) => setConversionType(e.target.value)}
+                                            className="mr-3"
+                                        />
+                                        <label htmlFor="compliant" className="text-sm">
+                                            <span className="font-medium text-green-700">GPX 1.1 Compliant</span>
+                                            <div className="text-xs text-gray-500 mt-1">
+                                                Full standard compliance with Garmin extensions for all GPS software
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Convert Button */}
@@ -710,14 +793,14 @@
                             </div>
                             
                             <div className="alert alert-info mt-6">
-                                <h3 className="text-lg font-semibold mb-2">About GPX Output</h3>
-                                <p className="text-sm">
-                                    The converted GPX file will contain track points with timestamps in UTC, 
-                                    high-precision position data (rounded to 10 decimal places), speed in m/s (rounded to 2 decimal places),
-                                    and marine-specific extensions including course over ground, 
-                                    true heading, heel, trim angles, inclination, and tilt data. The elevation field is populated with 
-                                    heading data for Insta360 compatibility.
-                                </p>
+                                <h3 className="text-lg font-semibold mb-2">About GPX Output Formats</h3>
+                                <div className="text-sm space-y-2">
+                                    <p><strong>Insta360 Compatible:</strong> Simplified GPX format with speed values mapped to elevation field. 
+                                    Contains only lat, lon, elevation (speed), and time - optimized for Insta360 Stats Dashboard compatibility.</p>
+                                    <p><strong>GPX 1.1 Compliant:</strong> Full standards compliance with Garmin TrackPointExtension v1. 
+                                    All custom fields (speed, course, heading, inclination, tilt) properly formatted in extensions for 
+                                    universal compatibility across Apple iOS, Android, and all GPS applications.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
