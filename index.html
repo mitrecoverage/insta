@@ -1,28 +1,699 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>CSV → GPX Converter</title>
-
-    <!-- React + ReactDOM from CDN -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-
-    <!-- Babel standalone (compiles JSX in the browser – OK for demo, not for production-scale) -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV to GPX Converter - Marine Navigation Data</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  </head>
-  <body>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #374151;
+        }
+
+        /* Layout utilities */
+        .min-h-screen { min-height: 100vh; }
+        .max-w-4xl { max-width: 56rem; }
+        .mx-auto { margin-left: auto; margin-right: auto; }
+        .py-8 { padding-top: 2rem; padding-bottom: 2rem; }
+        .px-4 { padding-left: 1rem; padding-right: 1rem; }
+        .p-4 { padding: 1rem; }
+        .p-8 { padding: 2rem; }
+        .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+        .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+        .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+        .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+        .px-8 { padding-left: 2rem; padding-right: 2rem; }
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-3 { margin-bottom: 0.75rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .mb-6 { margin-bottom: 1.5rem; }
+        .mb-8 { margin-bottom: 2rem; }
+        .mr-2 { margin-right: 0.5rem; }
+        .mr-3 { margin-right: 0.75rem; }
+        .mt-1 { margin-top: 0.25rem; }
+        .mt-4 { margin-top: 1rem; }
+        .mt-6 { margin-top: 1.5rem; }
+
+        /* Background gradients */
+        .bg-gradient {
+            background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+        }
+        .bg-white { background-color: white; }
+        .bg-gray-50 { background-color: #f9fafb; }
+        .bg-gray-100 { background-color: #f3f4f6; }
+        .bg-blue-50 { background-color: #eff6ff; }
+        .bg-red-50 { background-color: #fef2f2; }
+        .bg-green-50 { background-color: #f0fdf4; }
+        .bg-blue-600 { background-color: #2563eb; }
+        .bg-green-600 { background-color: #16a34a; }
+        .bg-gray-400 { background-color: #9ca3af; }
+
+        /* Colors */
+        .text-white { color: white; }
+        .text-gray-400 { color: #9ca3af; }
+        .text-gray-500 { color: #6b7280; }
+        .text-gray-600 { color: #4b5563; }
+        .text-gray-700 { color: #374151; }
+        .text-gray-800 { color: #1f2937; }
+        .text-gray-900 { color: #111827; }
+        .text-blue-600 { color: #2563eb; }
+        .text-blue-700 { color: #1d4ed8; }
+        .text-blue-800 { color: #1e40af; }
+        .text-red-500 { color: #ef4444; }
+        .text-red-700 { color: #b91c1c; }
+        .text-red-800 { color: #991b1b; }
+        .text-green-500 { color: #22c55e; }
+        .text-green-800 { color: #166534; }
+
+        /* Typography */
+        .text-xs { font-size: 0.75rem; }
+        .text-sm { font-size: 0.875rem; }
+        .text-lg { font-size: 1.125rem; }
+        .text-4xl { font-size: 2.25rem; }
+        .text-2xl { font-size: 1.5rem; }
+        .font-mono { font-family: ui-monospace, SFMono-Regular, monospace; }
+        .font-medium { font-weight: 500; }
+        .font-semibold { font-weight: 600; }
+        .font-bold { font-weight: 700; }
+
+        /* Layout */
+        .flex { display: flex; }
+        .grid { display: grid; }
+        .block { display: block; }
+        .hidden { display: none; }
+        .items-center { align-items: center; }
+        .items-start { align-items: flex-start; }
+        .justify-center { justify-content: center; }
+        .flex-shrink-0 { flex-shrink: 0; }
+        .space-y-2 > * + * { margin-top: 0.5rem; }
+        .space-y-4 > * + * { margin-top: 1rem; }
+        .gap-8 { gap: 2rem; }
+
+        /* Responsive grid */
+        @media (min-width: 768px) {
+            .md-grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* Borders and shadows */
+        .border { border-width: 1px; border-color: #e5e7eb; }
+        .border-2 { border-width: 2px; }
+        .border-dashed { border-style: dashed; }
+        .border-gray-300 { border-color: #d1d5db; }
+        .border-red-200 { border-color: #fecaca; }
+        .border-green-200 { border-color: #bbf7d0; }
+        .rounded { border-radius: 0.25rem; }
+        .rounded-lg { border-radius: 0.5rem; }
+        .shadow-lg { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+
+        /* Sizing */
+        .h-5 { height: 1.25rem; }
+        .w-5 { width: 1.25rem; }
+        .h-12 { height: 3rem; }
+        .w-12 { width: 3rem; }
+
+        /* Interactive elements */
+        .cursor-pointer { cursor: pointer; }
+        .disabled { cursor: not-allowed; }
+        .hover-border-blue:hover { border-color: #60a5fa; }
+        .hover-bg-blue:hover { background-color: #1d4ed8; }
+        .hover-bg-green:hover { background-color: #15803d; }
+        .transition-colors { transition: background-color 0.15s ease, border-color 0.15s ease; }
+
+        /* Text alignment and centering */
+        .text-center { text-align: center; }
+
+        /* Button styles */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            border-radius: 0.5rem;
+            transition: background-color 0.15s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background-color: #2563eb;
+            color: white;
+            padding: 0.75rem 2rem;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: #1d4ed8;
+        }
+
+        .btn-success {
+            background-color: #16a34a;
+            color: white;
+            padding: 0.75rem 1.5rem;
+        }
+
+        .btn-success:hover {
+            background-color: #15803d;
+        }
+
+        /* Upload area */
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            transition: border-color 0.15s ease;
+        }
+
+        .upload-area:hover {
+            border-color: #60a5fa;
+        }
+
+        /* Card styles */
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Alert styles */
+        .alert {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .alert.flex.items-center {
+            align-items: center;
+        }
+
+        .alert-error {
+            background-color: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+
+        .alert-success {
+            background-color: #f0fdf4;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+
+        .alert-info {
+            background-color: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1e40af;
+        }
+
+        /* Code styles */
+        code {
+            background-color: #f3f4f6;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-family: ui-monospace, SFMono-Regular, monospace;
+            font-size: 0.875rem;
+        }
+
+        /* Animations */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .md-grid-cols-2 {
+                grid-template-columns: 1fr;
+            }
+            .px-4 {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+        }
+
+        /* File input styling */
+        input[type="file"] {
+            display: none;
+        }
+
+        /* List styling */
+        ul {
+            list-style: none;
+        }
+
+        /* Utility classes for specific layouts */
+        .container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+            padding: 2rem 1rem;
+        }
+
+        .main-container {
+            max-width: 56rem;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .requirements-grid {
+            display: grid;
+            gap: 2rem;
+        }
+
+        @media (min-width: 768px) {
+            .requirements-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .file-info {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #eff6ff;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .convert-section {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .download-section {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .spinner {
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        /* Additional utility classes */
+        .mx-auto {
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .mt-0\.5 {
+            margin-top: 0.125rem;
+        }
+    </style>
+</head>
+<body>
     <div id="root"></div>
 
-    <!-- Your JSX component file -->
-    <script type="text/babel" src="csv-to-gpx-converter.jsx"></script>
-
-    <!-- Small bootstrap script that renders your component -->
     <script type="text/babel">
-      // Assuming your main component is named CsvToGpxConverter in csv-to-gpx-converter.jsx
-      const rootEl = document.getElementById('root');
-      const root = ReactDOM.createRoot(rootEl);
-      root.render(<CsvToGpxConverter />);
+        const { useState, useCallback } = React;
+        
+        // Lucide React icons as components
+        const Upload = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+        );
+
+        const Download = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+        );
+
+        const FileText = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+        );
+
+        const MapPin = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+        );
+
+        const AlertCircle = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        );
+
+        const CheckCircle = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        );
+
+        const CSVToGPXConverter = () => {
+            const [file, setFile] = useState(null);
+            const [converting, setConverting] = useState(false);
+            const [result, setResult] = useState(null);
+            const [error, setError] = useState(null);
+            const [pointCount, setPointCount] = useState(0);
+
+            // Convert knots to meters per second
+            const knotsToMps = (knots) => knots * 0.514444;
+
+            // Parse timestamp and convert to UTC
+            const parseTimestamp = (timestampStr) => {
+                try {
+                    const dt = new Date(timestampStr);
+                    // Format as ISO string with Z suffix, keeping 3 decimal places for milliseconds
+                    return dt.toISOString().replace(/\.(\d{3})\d*Z$/, '.$1Z');
+                } catch (e) {
+                    throw new Error(`Invalid timestamp format: ${timestampStr}`);
+                }
+            };
+
+            // Create GPX XML structure
+            const createGPXXML = (points) => {
+                let gpxContent = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="csv_to_gpx_converter_web" xmlns="http://www.topografix.com/GPX/1/1">
+<trk>
+<trkseg>`;
+
+                points.forEach(point => {
+                    gpxContent += `
+<trkpt lat="${point.latitude}" lon="${point.longitude}">
+<ele>${point.hdg_true}</ele>
+<time>${point.timestamp}</time>
+<cog>${point.cog}</cog>
+<hdg_true>${point.hdg_true}</hdg_true>
+<heel>${point.heel}</heel>
+<trim>${point.trim}</trim>
+</trkpt>`;
+                });
+
+                gpxContent += `
+</trkseg>
+</trk>
+</gpx>`;
+
+                return gpxContent;
+            };
+
+            // Parse CSV content
+            const parseCSV = (csvText) => {
+                const lines = csvText.trim().split('\n');
+                if (lines.length < 2) {
+                    throw new Error('CSV file must contain header and at least one data row');
+                }
+
+                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                const expectedColumns = ['timestamp', 'latitude', 'longitude', 'sog_kts', 'cog', 'hdg_true', 'heel', 'trim'];
+                
+                // Check for required columns
+                const missingColumns = expectedColumns.filter(col => !headers.includes(col));
+                if (missingColumns.length > 0) {
+                    throw new Error(`CSV missing required columns: ${missingColumns.join(', ')}`);
+                }
+
+                const points = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                    if (values.length !== headers.length) continue;
+
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = values[index];
+                    });
+
+                    try {
+                        // Validate and convert data
+                        const point = {
+                            timestamp: parseTimestamp(row.timestamp),
+                            latitude: parseFloat(row.latitude),
+                            longitude: parseFloat(row.longitude),
+                            sog_kts: parseFloat(row.sog_kts),
+                            cog: parseFloat(row.cog),
+                            hdg_true: parseFloat(row.hdg_true),
+                            heel: parseFloat(row.heel),
+                            trim: parseFloat(row.trim)
+                        };
+
+                        // Validate coordinates
+                        if (isNaN(point.latitude) || isNaN(point.longitude)) {
+                            console.warn(`Skipping row ${i + 1}: Invalid coordinates`);
+                            continue;
+                        }
+
+                        points.push(point);
+                    } catch (e) {
+                        console.warn(`Skipping row ${i + 1}: ${e.message}`);
+                    }
+                }
+
+                if (points.length === 0) {
+                    throw new Error('No valid data points found in CSV file');
+                }
+
+                return points;
+            };
+
+            // Handle file upload
+            const handleFileUpload = useCallback((event) => {
+                const uploadedFile = event.target.files[0];
+                if (uploadedFile) {
+                    setFile(uploadedFile);
+                    setResult(null);
+                    setError(null);
+                    setPointCount(0);
+                }
+            }, []);
+
+            // Convert CSV to GPX
+            const convertToGPX = useCallback(async () => {
+                if (!file) return;
+
+                setConverting(true);
+                setError(null);
+                setResult(null);
+
+                try {
+                    const csvText = await file.text();
+                    const points = parseCSV(csvText);
+                    const gpxXML = createGPXXML(points);
+                    
+                    // Create blob and download URL
+                    const blob = new Blob([gpxXML], { type: 'application/gpx+xml' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const outputFilename = file.name.replace(/\.csv$/i, '_converted.gpx');
+                    
+                    setResult({
+                        url,
+                        filename: outputFilename,
+                        content: gpxXML
+                    });
+                    setPointCount(points.length);
+                    
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setConverting(false);
+                }
+            }, [file]);
+
+            // Download GPX file
+            const downloadGPX = useCallback(() => {
+                if (!result) return;
+                
+                const link = document.createElement('a');
+                link.href = result.url;
+                link.download = result.filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }, [result]);
+
+            return (
+                <div className="container">
+                    <div className="main-container">
+                        {/* Header */}
+                        <div className="header">
+                            <div className="header-title">
+                                <MapPin className="h-12 w-12 text-blue-600 mr-3" />
+                                <h1 className="text-4xl font-bold text-gray-900">CSV to GPX Converter</h1>
+                            </div>
+                            <p className="text-lg text-gray-600">
+                                Convert marine navigation CSV data to GPX format for GPS devices and mapping applications
+                            </p>
+                        </div>
+
+                        {/* Main Content */}
+                        <div className="card">
+                            {/* Upload Section */}
+                            <div className="mb-8">
+                                <label className="block text-sm font-medium text-gray-700 mb-4">
+                                    Upload CSV File
+                                </label>
+                                <div className="upload-area">
+                                    <input
+                                        type="file"
+                                        accept=".csv"
+                                        onChange={handleFileUpload}
+                                        id="csvFile"
+                                    />
+                                    <label htmlFor="csvFile" className="cursor-pointer block">
+                                        <div style={{margin: '0 auto', width: 'fit-content'}}>
+                                            <Upload className="h-12 w-12 text-gray-400 mb-4" />
+                                        </div>
+                                        <div className="text-lg font-medium text-gray-900 mb-2">
+                                            Choose CSV file or drag and drop
+                                        </div>
+                                        <div className="text-sm text-gray-500">
+                                            File must contain: timestamp, latitude, longitude, sog_kts, cog, hdg_true, heel, trim
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                {file && (
+                                    <div className="file-info">
+                                        <FileText className="h-5 w-5 text-blue-600 mr-2" />
+                                        <span className="text-sm text-blue-800">
+                                            Selected: {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Convert Button */}
+                            <div className="convert-section">
+                                <button
+                                    onClick={convertToGPX}
+                                    disabled={!file || converting}
+                                    className="btn btn-primary flex items-center"
+                                >
+                                    {converting ? (
+                                        <div className="flex items-center">
+                                            <div className="spinner animate-spin"></div>
+                                            Converting...
+                                        </div>
+                                    ) : (
+                                        'Convert to GPX'
+                                    )}
+                                </button>
+                            </div>
+
+                            {/* Error Display */}
+                            {error && (
+                                <div className="alert alert-error mb-6">
+                                    <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+                                    <div>
+                                        <div className="font-medium">Conversion Error</div>
+                                        <div className="text-sm mt-1">{error}</div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Success and Download */}
+                            {result && (
+                                <div className="space-y-4">
+                                    <div className="alert alert-success flex items-center">
+                                        <CheckCircle className="h-5 w-5 mr-2" />
+                                        <div>
+                                            <div className="font-medium">Conversion Successful!</div>
+                                            <div className="text-sm mt-1">
+                                                Converted {pointCount} data points to GPX format
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="download-section">
+                                        <button
+                                            onClick={downloadGPX}
+                                            className="btn btn-success flex items-center"
+                                        >
+                                            <Download className="h-5 w-5 mr-2" />
+                                            Download {result.filename}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Instructions */}
+                        <div className="card">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-4">CSV Format Requirements</h2>
+                            <div className="requirements-grid">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-800 mb-3">Required Columns</h3>
+                                    <ul className="space-y-2 text-sm text-gray-600">
+                                        <li><code>timestamp</code> - ISO 8601 format with timezone</li>
+                                        <li><code>latitude</code> - Decimal degrees</li>
+                                        <li><code>longitude</code> - Decimal degrees</li>
+                                        <li><code>sog_kts</code> - Speed over ground (knots)</li>
+                                        <li><code>cog</code> - Course over ground (degrees)</li>
+                                        <li><code>hdg_true</code> - True heading (degrees)</li>
+                                        <li><code>heel</code> - Heel angle (degrees)</li>
+                                        <li><code>trim</code> - Trim angle (degrees)</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-800 mb-3">Example Data</h3>
+                                    <div className="bg-gray-50 p-4 rounded-lg text-xs font-mono">
+                                        <div>timestamp,latitude,longitude,sog_kts,cog,hdg_true,heel,trim</div>
+                                        <div>2025-11-20T08:07:30.060+0400,25.1234,55.5678,8.5,180.0,175.2,5.1,2.3</div>
+                                        <div>2025-11-20T08:07:31.060+0400,25.1235,55.5679,8.6,181.0,176.1,5.2,2.4</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="alert alert-info mt-6">
+                                <h3 className="text-lg font-semibold mb-2">About GPX Output</h3>
+                                <p className="text-sm">
+                                    The converted GPX file will contain track points with timestamps in UTC, 
+                                    position data, and marine-specific extensions including course over ground, 
+                                    true heading, heel, and trim angles. The elevation field is populated with 
+                                    heading data for Insta360 compatibility.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Render the application
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<CSVToGPXConverter />);
     </script>
-  </body>
+</body>
 </html>
