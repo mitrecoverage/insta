@@ -387,9 +387,24 @@
             const [result, setResult] = useState(null);
             const [error, setError] = useState(null);
             const [pointCount, setPointCount] = useState(0);
+            const [duration, setDuration] = useState('');
 
             // Convert knots to meters per second
             const knotsToMps = (knots) => knots * 0.514444;
+
+            // Format duration from milliseconds to human readable format
+            const formatDuration = (startTime, endTime) => {
+                const durationMs = new Date(endTime).getTime() - new Date(startTime).getTime();
+                const totalMinutes = Math.floor(durationMs / (1000 * 60));
+                const hours = Math.floor(totalMinutes / 60);
+                const minutes = totalMinutes % 60;
+                
+                if (hours > 0) {
+                    return `${hours} hour${hours !== 1 ? 's' : ''} ${minutes} min`;
+                } else {
+                    return `${minutes} min`;
+                }
+            };
 
             // Parse timestamp and convert to UTC
             const parseTimestamp = (timestampStr) => {
@@ -458,6 +473,7 @@
                     try {
                         // Validate and convert data
                         const point = {
+                            originalTimestamp: row.timestamp, // Store original timestamp for duration calculation
                             timestamp: parseTimestamp(row.timestamp),
                             latitude: parseFloat(row.latitude),
                             longitude: parseFloat(row.longitude),
@@ -495,6 +511,7 @@
                     setResult(null);
                     setError(null);
                     setPointCount(0);
+                    setDuration('');
                 }
             }, []);
 
@@ -505,11 +522,18 @@
                 setConverting(true);
                 setError(null);
                 setResult(null);
+                setDuration('');
 
                 try {
                     const csvText = await file.text();
                     const points = parseCSV(csvText);
                     const gpxXML = createGPXXML(points);
+                    
+                    // Calculate duration from first to last point
+                    let trackDuration = '';
+                    if (points.length > 1) {
+                        trackDuration = formatDuration(points[0].originalTimestamp, points[points.length - 1].originalTimestamp);
+                    }
                     
                     // Create blob and download URL
                     const blob = new Blob([gpxXML], { type: 'application/gpx+xml' });
@@ -523,6 +547,7 @@
                         content: gpxXML
                     });
                     setPointCount(points.length);
+                    setDuration(trackDuration);
                     
                 } catch (err) {
                     setError(err.message);
@@ -632,6 +657,7 @@
                                             <div className="font-medium">Conversion Successful!</div>
                                             <div className="text-sm mt-1">
                                                 Converted {pointCount} data points to GPX format
+                                                {duration && <span> • Total duration: {duration}</span>}
                                             </div>
                                         </div>
                                     </div>
