@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSV to GPX Converter - Marine Navigation Data</title>
+    <title>CSV to GPX Converter - Enhanced Marine Navigation Data</title>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -426,13 +426,16 @@
 
                 points.forEach(point => {
                     gpxContent += `
-<trkpt lat="${point.latitude}" lon="${point.longitude}">
+<trkpt lat="${point.latitude.toFixed(10)}" lon="${point.longitude.toFixed(10)}">
 <ele>${point.hdg_true}</ele>
 <time>${point.timestamp}</time>
+<speed>${point.speed_mps}</speed>
 <cog>${point.cog}</cog>
 <hdg_true>${point.hdg_true}</hdg_true>
 <heel>${point.heel}</heel>
 <trim>${point.trim}</trim>
+<inclination>${point.inclination}</inclination>
+<tilt>${point.tilt}</tilt>
 </trkpt>`;
                 });
 
@@ -472,16 +475,20 @@
 
                     try {
                         // Validate and convert data
+                        const sogKts = parseFloat(row.sog_kts);
                         const point = {
                             originalTimestamp: row.timestamp, // Store original timestamp for duration calculation
                             timestamp: parseTimestamp(row.timestamp),
-                            latitude: parseFloat(row.latitude),
-                            longitude: parseFloat(row.longitude),
-                            sog_kts: parseFloat(row.sog_kts),
+                            latitude: parseFloat(parseFloat(row.latitude).toFixed(10)),
+                            longitude: parseFloat(parseFloat(row.longitude).toFixed(10)),
+                            sog_kts: sogKts,
+                            speed_mps: parseFloat(knotsToMps(sogKts).toFixed(2)),
                             cog: parseFloat(row.cog),
                             hdg_true: parseFloat(row.hdg_true),
                             heel: parseFloat(row.heel),
-                            trim: parseFloat(row.trim)
+                            trim: parseFloat(row.trim),
+                            inclination: parseFloat(row.heel), // Copy heel as inclination angle
+                            tilt: parseFloat(row.trim) // Copy trim as tilt angle
                         };
 
                         // Validate coordinates
@@ -575,10 +582,10 @@
                         <div className="header">
                             <div className="header-title">
                                 <MapPin className="h-12 w-12 text-blue-600 mr-3" />
-                                <h1 className="text-4xl font-bold text-gray-900">CSV to GPX Converter</h1>
+                                <h1 className="text-4xl font-bold text-gray-900">Enhanced CSV to GPX Converter</h1>
                             </div>
                             <p className="text-lg text-gray-600">
-                                Convert marine navigation CSV data to GPX format for GPS devices and mapping applications
+                                Convert marine navigation CSV data to GPX format with enhanced precision (10-digit coordinates), speed in m/s (2-decimal precision), and inclination/tilt angle data
                             </p>
                         </div>
 
@@ -706,8 +713,9 @@
                                 <h3 className="text-lg font-semibold mb-2">About GPX Output</h3>
                                 <p className="text-sm">
                                     The converted GPX file will contain track points with timestamps in UTC, 
-                                    position data, and marine-specific extensions including course over ground, 
-                                    true heading, heel, and trim angles. The elevation field is populated with 
+                                    high-precision position data (rounded to 10 decimal places), speed in m/s (rounded to 2 decimal places),
+                                    and marine-specific extensions including course over ground, 
+                                    true heading, heel, trim angles, inclination, and tilt data. The elevation field is populated with 
                                     heading data for Insta360 compatibility.
                                 </p>
                             </div>
